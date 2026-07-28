@@ -1,98 +1,95 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Camera,
+  Map,
+  UserLocation,
+  type CameraRef,
+} from "@maplibre/maplibre-react-native";
+import * as Location from "expo-location";
+import { SymbolView } from "expo-symbols";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, useColorScheme } from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const DEFAULT_COORDINATE: [number, number] = [-122.4194, 37.7749]; // San Francisco
+const MAP_STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty";
+const MAP_STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 
 export default function HomeScreen() {
+  const colorScheme = useColorScheme();
+  const cameraRef = useRef<CameraRef>(null);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermissionGranted(status === "granted");
+    })();
+  }, []);
+
+  const recenterOnUser = useCallback(async () => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== "granted") return;
+
+    const location = await Location.getCurrentPositionAsync({});
+    cameraRef.current?.easeTo({
+      center: [location.coords.longitude, location.coords.latitude],
+      zoom: 15,
+      pitch: 60,
+      bearing: -20,
+      duration: 800,
+    });
+  }, []);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <Map
+      mapStyle={colorScheme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
+      style={styles.map}
+    >
+      <Camera
+        ref={cameraRef}
+        pitch={60}
+        bearing={-20}
+        zoom={15}
+        initialViewState={{ center: DEFAULT_COORDINATE }}
+        trackUserLocation={permissionGranted ? "default" : undefined}
+      />
+      {permissionGranted && (
+        <>
+          <UserLocation />
+          <Pressable
+            style={styles.recenterButton}
+            onPress={recenterOnUser}
+            accessibilityLabel="Recenter on your location"
+          >
+            <SymbolView
+              name="location.fill"
+              size={22}
+              tintColor="#007AFF"
+            />
+          </Pressable>
+        </>
+      )}
+    </Map>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  map: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  recenterButton: {
+    position: "absolute",
+    bottom: 40,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
