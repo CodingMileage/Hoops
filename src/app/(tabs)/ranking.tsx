@@ -1,27 +1,10 @@
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View } from "react-native";
 
 export default function RankingScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Ranking</Text>
-      <Text style={styles.subtitle}>Player leaderboards</Text>
+    <View className="flex-1 items-center justify-center gap-2">
+      <Text className="text-3xl font-bold">Ranking</Text>
+      <Text className="text-base text-gray-500">Player leaderboards</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-  },
-});

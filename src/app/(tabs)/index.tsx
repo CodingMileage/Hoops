@@ -3,20 +3,42 @@ import {
   Map,
   UserLocation,
   type CameraRef,
+  type MapRef,
 } from "@maplibre/maplibre-react-native";
 import * as Location from "expo-location";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, useColorScheme } from "react-native";
+import {
+  Pressable,
+  Text,
+  useColorScheme,
+} from "react-native";
+import { CourtMarkers } from "@/components/CourtMarkers";
+import { useMapBounds } from "@/hooks/useMapBounds";
+import { useCourtsInBounds } from "@/hooks/useCourtsInBounds";
 
 const DEFAULT_COORDINATE: [number, number] = [-122.4194, 37.7749]; // San Francisco
 const MAP_STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty";
 const MAP_STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 
+const emptyCollection: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const cameraRef = useRef<CameraRef>(null);
+  const mapRef = useRef<MapRef>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+
+  // Pan-to-search: extract debounced bounds from map movement
+  const { bounds, isReady, handleRegionChange } = useMapBounds();
+
+  // Fetch courts from Overpass API when bounds change
+  const { data: courts = emptyCollection, isFetching } = useCourtsInBounds(
+    isReady ? bounds : null,
+  );
 
   useEffect(() => {
     (async () => {
@@ -41,8 +63,10 @@ export default function HomeScreen() {
 
   return (
     <Map
+      ref={mapRef}
       mapStyle={colorScheme === "dark" ? MAP_STYLE_DARK : MAP_STYLE_LIGHT}
-      style={styles.map}
+      className="flex-1"
+      onRegionDidChange={handleRegionChange}
     >
       <Camera
         ref={cameraRef}
@@ -52,11 +76,25 @@ export default function HomeScreen() {
         initialViewState={{ center: DEFAULT_COORDINATE }}
         trackUserLocation={permissionGranted ? "default" : undefined}
       />
+
+      {/* Court markers — only rendered when zoomed in enough */}
+      {isReady && <CourtMarkers courts={courts} />}
+
+      {/* Loading indicator when fetching new courts */}
+      {isFetching && (
+        <Text className="absolute top-[60px] self-center bg-black/60 text-white text-xs px-3 py-1.5 rounded-xl overflow-hidden">Finding courts…</Text>
+      )}
+
+      {/* Zoom gate: prompt user to zoom in */}
+      {!isReady && (
+        <Text className="absolute top-[60px] self-center bg-black/75 text-white text-sm font-semibold px-4 py-2 rounded-[20px] overflow-hidden">🔍 Zoom in to find courts</Text>
+      )}
+
       {permissionGranted && (
         <>
           <UserLocation />
           <Pressable
-            style={styles.recenterButton}
+            className="absolute bottom-10 right-4 w-11 h-11 rounded-full bg-white items-center justify-center shadow-md"
             onPress={recenterOnUser}
             accessibilityLabel="Recenter on your location"
           >
@@ -72,24 +110,3 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  map: {
-    flex: 1,
-  },
-  recenterButton: {
-    position: "absolute",
-    bottom: 40,
-    right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "white",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-});
