@@ -1,7 +1,7 @@
+import { useAuth } from "@/hooks/useAuth";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { Link, router } from "expo-router";
-import { useAuth } from "@/hooks/useAuth";
 
 export default function SignInScreen() {
   const signIn = useAuth((s) => s.signIn);
@@ -34,6 +34,7 @@ export default function SignInScreen() {
       <TextInput
         className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base"
         placeholder="Email"
+        placeholderTextColor="#9CA3AF"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -46,6 +47,7 @@ export default function SignInScreen() {
       <TextInput
         className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base"
         placeholder="Password"
+        placeholderTextColor="#9CA3AF"
         value={password}
         onChangeText={setPassword}
         secureTextEntry

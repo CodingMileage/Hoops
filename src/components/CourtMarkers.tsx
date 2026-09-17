@@ -1,5 +1,8 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
+import type { NativeSyntheticEvent } from "react-native";
+import type { PressEventWithFeatures } from "@maplibre/maplibre-react-native";
+import type { CourtProperties } from "@/lib/courts";
 
 const SOURCE_ID = "courts-source";
 const CLUSTER_LAYER_ID = "courts-clusters";
@@ -9,6 +12,8 @@ const COURT_POINT_LAYER_ID = "courts-points";
 interface CourtMarkersProps {
   /** GeoJSON FeatureCollection of basketball courts (from Overpass API) */
   courts: GeoJSON.FeatureCollection;
+  /** Called when the user taps an individual court marker (not a cluster) */
+  onCourtPress?: (court: CourtProperties) => void;
 }
 
 /**
@@ -17,9 +22,33 @@ interface CourtMarkersProps {
  * Must be rendered as a child of <Map>. Uses a GeoJSONSource with
  * built-in clustering, CircleLayer for points, and SymbolLayer for
  * cluster counts.
+ *
+ * Tapping an individual court fires `onCourtPress` with the court's
+ * properties. Tapping a cluster is ignored (no expansion yet).
  */
-export function CourtMarkers({ courts }: CourtMarkersProps) {
+export function CourtMarkers({ courts, onCourtPress }: CourtMarkersProps) {
   const geoJSON = useMemo(() => courts, [courts]);
+
+  const handlePress = useCallback(
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      if (!onCourtPress) return;
+
+      const features = event.nativeEvent?.features;
+      if (!features?.length) return;
+
+      const feature = features[0];
+      const props = feature.properties as Record<string, unknown> | undefined;
+
+      // Ignore cluster taps (clusters have a `point_count` property)
+      if (props?.point_count != null) return;
+
+      // Ignore features without OSM-style properties
+      if (!props?.id) return;
+
+      onCourtPress(props as unknown as CourtProperties);
+    },
+    [onCourtPress],
+  );
 
   if (!geoJSON.features || geoJSON.features.length === 0) return null;
 
@@ -30,6 +59,7 @@ export function CourtMarkers({ courts }: CourtMarkersProps) {
       cluster
       clusterRadius={50}
       clusterMaxZoom={14}
+      onPress={handlePress}
     >
       {/* Clustered circles — sized and colored by point count */}
       <Layer

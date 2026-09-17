@@ -1,8 +1,32 @@
-# Welcome to your Expo app 👋
+# Hoops 🏀
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Pickup basketball app for iOS. Find local courts on an interactive map, and (coming soon) compete in ranked 1v1s, connect with players, and get paid.
 
-## Get started
+<div align="center">
+  <img src="assets/login.png" alt="Sign-in screen" width="200" />
+  <img src="assets/map.png" alt="Court discovery map" width="200" />
+  <img src="assets/court.png" alt="Court detail sheet" width="200" />
+</div>
+
+## Features
+
+- **Court discovery** — pan-and-search map that queries OpenStreetMap (Overpass API) for basketball courts in the visible area and renders them as markers. 3D tilted camera, dark/light map styles, user location tracking, and zoom-gated fetching.
+- **Court details** — native iOS bottom sheet with hoop count, surface, and indoor/outdoor info.
+- **Court enrichment pipeline** — discovered courts sync to Supabase (PostGIS) through a PL/pgSQL batch-upsert function, so ratings, check-ins, and photos can accumulate over time.
+- **Auth** — email/password sign-up and sign-in with Supabase Auth, session persistence, and auto token refresh.
+- **Profile** — view your account and courts stored in Supabase.
+
+## Tech Stack
+
+- [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) / React Native / TypeScript
+- [Expo Router](https://docs.expo.dev/router/introduction/) (file-based routing)
+- [MapLibre](https://maplibre.org/) with OpenFreeMap tiles + [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) for court data
+- [Supabase](https://supabase.com) with PostGIS, row-level security, and spatial indexing
+- [TanStack Query](https://tanstack.com/query) for caching and map state
+- [@expo/ui](https://docs.expo.dev/versions/latest/sdk/ui/) native SwiftUI components (bottom sheets, symbols)
+- NativeWind (Tailwind) for styling, Zustand for auth state
+
+## Getting Started
 
 1. Install dependencies
 
@@ -10,47 +34,36 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables in `.env`
+
+   ```bash
+   EXPO_PUBLIC_SUPABASE_URL=your-supabase-project-url
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+   ```
+
+3. Start the app
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+Then press `i` to open in the iOS simulator, or scan the QR code with Expo Go.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Database Setup
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Run the migrations in the Supabase SQL Editor, in order:
 
-## Get a fresh project
+1. [`supabase/migrations/001_enable_postgis_and_courts.sql`](supabase/migrations/001_enable_postgis_and_courts.sql) — enables PostGIS, creates the `courts` table (spatially indexed), and sets up RLS policies.
+2. [`supabase/migrations/002_upsert_courts_function.sql`](supabase/migrations/002_upsert_courts_function.sql) — creates the `upsert_courts_from_osm` RPC function that batch-upserts OSM-discovered courts.
 
-When you're ready, run:
+## Project Structure
 
-```bash
-npm run reset-project
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+src/
+  app/           Expo Router screens (tabs, auth)
+  components/    Map markers, court detail sheet
+  hooks/         Map bounds, courts in bounds, auth state
+  lib/           Supabase client, court sync, OSM queries
+supabase/
+  migrations/    PostGIS schema and RPC functions
+```

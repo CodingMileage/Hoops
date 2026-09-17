@@ -61,6 +61,7 @@ export default function SignUpScreen() {
       <TextInput
         className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base"
         placeholder="Email"
+        placeholderTextColor="#9CA3AF"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -73,6 +74,7 @@ export default function SignUpScreen() {
       <TextInput
         className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base"
         placeholder="Password"
+        placeholderTextColor="#9CA3AF"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -83,6 +85,7 @@ export default function SignUpScreen() {
       <TextInput
         className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base"
         placeholder="Confirm password"
+        placeholderTextColor="#9CA3AF"
         value={confirm}
         onChangeText={setConfirm}
         secureTextEntry
